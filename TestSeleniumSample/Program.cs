@@ -5,7 +5,9 @@ using NUnit.Framework;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
+using OpenQA.Selenium.Remote;
 using TestSeleniumSample.Framework;
+using System.Globalization;
 
 namespace TestSeleniumSample
 {
@@ -70,6 +72,25 @@ namespace TestSeleniumSample
                 var wait = new WebDriverWait(chromeDriver, TimeSpan.FromSeconds(3));
                 var result = wait.Until(ExpectedConditions.TextToBePresentInElement(chromeDriver.FindElement(By.CssSelector(".city-name")), "Burdur"));
                 Assert.IsTrue(result);
+            }
+        }
+
+        [Test]
+        public static void CheckAMP()
+        {
+            ChromeOptions options = new ChromeOptions();
+            options.SetLoggingPreference(LogType.Browser, LogLevel.Info);
+            using (chromeDriver = new ChromeDriver(options))
+            {
+                chromeDriver.Navigate().GoToUrl("http://www.hurriyet.com.tr/adanada-ucuz-et-kuyrugu-40492188");
+                Page.CloseInterstitialAd(chromeDriver);
+                IWebElement ampHtmlElement = chromeDriver.FindElements(By.TagName("link"))?.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x.GetAttribute("rel")) && x.GetAttribute("rel") == "amphtml");
+                Assert.AreNotEqual(ampHtmlElement, null);
+                Assert.IsTrue(!string.IsNullOrWhiteSpace(ampHtmlElement.GetAttribute("href")));
+                chromeDriver.Navigate().GoToUrl($"{ampHtmlElement.GetAttribute("href")}#development=1");
+                var consoleLogs = chromeDriver.Manage().Logs.GetLog(LogType.Browser);
+                var culture = CultureInfo.CreateSpecificCulture("en-US");
+                Assert.IsTrue(consoleLogs.Any(x => culture.CompareInfo.IndexOf(x.Message, "AMP validation successful", CompareOptions.OrdinalIgnoreCase) >= 0));
             }
         }
 
